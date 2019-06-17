@@ -1,4 +1,4 @@
-/*! nouislider - 13.1.5 - 4/24/2019 */
+/*! nouislider - 13.1.5 - 6/17/2019 */
 (function(factory) {
     if (typeof define === "function" && define.amd) {
         // AMD. Register as an anonymous module.
@@ -518,6 +518,10 @@
         parsed.singleStep = entry;
     }
 
+    function testRestricted(parsed, entry) {
+        parsed.restricted = parsed ? false : parsed;
+    }
+
     function testRange(parsed, entry) {
         // Filter incorrect input.
         if (typeof entry !== "object" || Array.isArray(entry)) {
@@ -850,6 +854,7 @@
         // Tests are executed in the order they are presented here.
         var tests = {
             step: { r: false, t: testStep },
+            restricted: { r: true, t: testRestricted },
             start: { r: true, t: testStart },
             connect: { r: true, t: testConnect },
             direction: { r: true, t: testDirection },
@@ -873,6 +878,7 @@
 
         var defaults = {
             connect: false,
+            restricted: true,
             direction: "ltr",
             behaviour: "tap",
             orientation: "horizontal",
@@ -982,6 +988,8 @@
         var scope_HandleNumbers = [];
         var scope_ActiveHandlesCount = 0;
         var scope_Events = {};
+        var scope_Restricted = options.restricted;
+        console.log(scope_Restricted);
 
         // Exposed API
         var scope_Self;
@@ -1150,9 +1158,15 @@
                 // Update Aria Values for all handles, as a change in one changes min and max values for the next.
                 scope_HandleNumbers.forEach(function(index) {
                     var handle = scope_Handles[index];
-
-                    var min = checkHandlePosition(scope_Locations, index, 0, true, true, true);
-                    var max = checkHandlePosition(scope_Locations, index, 100, true, true, true);
+                    var min = checkHandlePosition(scope_Locations, index, 0, scope_Restricted, scope_Restricted, true);
+                    var max = checkHandlePosition(
+                        scope_Locations,
+                        index,
+                        100,
+                        scope_Restricted,
+                        scope_Restricted,
+                        true
+                    );
 
                     var now = positions[index];
 
@@ -1751,7 +1765,7 @@
                 addClassFor(scope_Target, options.cssClasses.tap, options.animationDuration);
             }
 
-            setHandle(handleNumber, proposal, true, true);
+            setHandle(handleNumber, proposal, options.restricted, options.restricted);
 
             setZindex();
 
@@ -1950,6 +1964,7 @@
         function checkHandlePosition(reference, handleNumber, to, lookBackward, lookForward, getValue) {
             // For sliders with multiple handles, limit movement to the other handle.
             // Apply the margin option by adding it to the handle positions.
+            console.log(lookForward, lookBackward);
             if (scope_Handles.length > 1 && !options.events.unconstrained) {
                 if (lookBackward && handleNumber > 0) {
                     to = Math.max(to, reference[handleNumber - 1] + options.margin);
@@ -2009,8 +2024,8 @@
         function moveHandles(upward, proposal, locations, handleNumbers) {
             var proposals = locations.slice();
 
-            var b = [!upward, upward];
-            var f = [upward, !upward];
+            var b = options.restricted ? [!upward, upward] : [false, false];
+            var f = options.restricted ? [upward, !upward] : [false, false];
 
             // Copy handleNumbers so we don't change the dataset
             handleNumbers = handleNumbers.slice();
@@ -2024,6 +2039,7 @@
             // Step 1: get the maximum percentage that any of the handles can move
             if (handleNumbers.length > 1) {
                 handleNumbers.forEach(function(handleNumber, o) {
+                    console.log("mh");
                     var to = checkHandlePosition(
                         proposals,
                         handleNumber,
@@ -2045,7 +2061,7 @@
 
             // If using one handle, check backward AND forward
             else {
-                b = f = [true];
+                b = f = [options.restricted];
             }
 
             var state = false;
@@ -2100,6 +2116,7 @@
 
         // Test suggested values and apply margin, step.
         function setHandle(handleNumber, to, lookBackward, lookForward) {
+            console.log("sh");
             to = checkHandlePosition(scope_Locations, handleNumber, to, lookBackward, lookForward, false);
 
             if (to === false) {
@@ -2185,7 +2202,7 @@
 
             // Second pass. Now that all base values are set, apply constraints
             scope_HandleNumbers.forEach(function(handleNumber) {
-                setHandle(handleNumber, scope_Locations[handleNumber], true, true);
+                setHandle(handleNumber, scope_Locations[handleNumber], options.restricted, options.restricted);
             });
 
             setZindex();
@@ -2215,7 +2232,7 @@
             }
 
             // Look both backward and forward, since we don't want this handle to "push" other handles (#960);
-            setHandle(handleNumber, resolveToValue(value, handleNumber), true, true);
+            setHandle(handleNumber, resolveToValue(value, handleNumber), options.restricted, options.restricted);
 
             fireEvent("update", handleNumber);
 
@@ -2343,6 +2360,7 @@
             });
 
             var newOptions = testOptions(originalOptions);
+            console.log(newOptions);
 
             // Load new options into the slider state
             updateAble.forEach(function(name) {
